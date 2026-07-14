@@ -12,14 +12,17 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.seyi.focuslocktest.ui.theme.FocusLockTestTheme
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -40,7 +43,26 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FocusLockScreen(modifier: Modifier = Modifier)
 {
-    var isFocusing by remember { mutableStateOf(false) }
+    var isFocusing by rememberSaveable { mutableStateOf(false) }
+    var timeRemaining by rememberSaveable { mutableStateOf( 1500)}
+
+    LaunchedEffect(isFocusing)
+    {
+        if (isFocusing)
+        {
+            while (timeRemaining > 0)
+            {
+                delay(1000)
+                timeRemaining--
+            }
+        }
+    }
+
+
+    val minutes = timeRemaining / 60
+    val seconds = timeRemaining % 60
+    val formattedTime = String.format("%02d:%02d", minutes, seconds)
+
     Column(
         modifier = modifier.fillMaxSize(),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -58,7 +80,7 @@ fun FocusLockScreen(modifier: Modifier = Modifier)
             else{"Make The Choice To Stay Focused Today"}
         )
 
-        Text(text = "25 Minutes")
+        Text(text = formattedTime)
 
         Text(
             text = if (isFocusing)
@@ -69,11 +91,10 @@ fun FocusLockScreen(modifier: Modifier = Modifier)
         Button(onClick = {isFocusing = true})
         {
             Text(
-                text = if (isFocusing) {
-                    "Focus Mode Activated"
-                } else {
-                    "Activate Mode"
-                }
+                text = if (isFocusing)
+                { "Focus Mode Activated" }
+                else
+                { "Activate Mode" }
             )
         }
     }
