@@ -40,65 +40,129 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+enum class SessionState {
+    Idle,
+    Focusing,
+    Completed
+}
+
 @Composable
-fun FocusLockScreen(modifier: Modifier = Modifier)
-{
-    var isFocusing by rememberSaveable { mutableStateOf(false) }
-    var timeRemaining by rememberSaveable { mutableStateOf( 1500)}
-
-    LaunchedEffect(isFocusing)
-    {
-        if (isFocusing)
-        {
-            while (timeRemaining > 0)
-            {
-                delay(1000)
-                timeRemaining--
-            }
-        }
-    }
-
+fun FocusLockScreen(modifier: Modifier = Modifier) {
+    var sessionState by rememberSaveable { mutableStateOf(SessionState.Idle) }
+    var timeRemaining by rememberSaveable { mutableStateOf(1500) }
 
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
     val formattedTime = String.format("%02d:%02d", minutes, seconds)
 
-    Column(
-        modifier = modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            text = if (isFocusing)
-            { "FocusLock (Active)" }
-            else
-            { "FocusLock (Ready)" }
-        )
-
-        Text(text = if (isFocusing)
-            {"keep Holding On!!!"}
-            else{"Make The Choice To Stay Focused Today"}
-        )
-
-        Text(text = formattedTime)
-
-        Text(
-            text = if (isFocusing)
-            { "Status: Focusing" }
-            else
-            { "Status: Idle" }
-        )
-        Button(onClick = {isFocusing = true})
-        {
-            Text(
-                text = if (isFocusing)
-                { "Focus Mode Activated" }
-                else
-                { "Activate Mode" }
-            )
+    LaunchedEffect(sessionState)
+    {
+        if (sessionState == SessionState.Focusing) {
+            while (timeRemaining > 0) {
+                delay(1000)
+                timeRemaining--
+            }
+            sessionState = SessionState.Completed
         }
     }
 
+
+    when (sessionState) {
+        SessionState.Idle -> {
+            IdleScreen(
+                onStartClicked = {
+                    sessionState = SessionState.Focusing
+                }
+            )
+        }
+
+        SessionState.Focusing -> {
+            FocusScreen(
+                time = formattedTime
+            )
+        }
+
+        SessionState.Completed -> {
+            CompletedScreen(
+                onRestartClicked = {
+
+                    timeRemaining = 1500
+                    sessionState = SessionState.Idle
+                }
+            )
+
+        }
+
+    }
+}
+@Composable
+fun IdleScreen(
+    onStartClicked: () -> Unit
+)
+{
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("FocusLock (Ready)")
+
+        Text("Make The Choice To Stay Focused Today")
+
+        Text("25:00")
+
+        Text("Status: Idle")
+        Button(onClick = onStartClicked)
+        {
+            Text("Activate Mode")
+        }
+    }
+}
+
+@Composable
+fun FocusScreen(
+    time: String
+)
+{
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("FocusLock (Active)")
+
+        Text("Keep Holding on!!!")
+
+        Text(time)
+
+        Text("Status: Focus")
+        Button(onClick = {})
+        {
+            Text("Focus Mode Activate")
+        }
+    }
+}
+
+@Composable
+fun CompletedScreen(
+    onRestartClicked: () -> Unit
+)
+{
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center
+    ) {
+        Text("🎉 Session Complete!")
+
+        Text("Great job staying focused!")
+
+        Text("Status: Completed")
+        Button(onClick = onRestartClicked)
+        {
+            Text("Start Another Session")
+        }
+    }
 }
 
 @Preview(showBackground = true)
