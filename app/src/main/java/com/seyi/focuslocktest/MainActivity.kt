@@ -43,6 +43,7 @@ class MainActivity : ComponentActivity() {
 enum class SessionState {
     Idle,
     Focusing,
+    Paused,
     Completed
 }
 
@@ -78,19 +79,32 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
 
         SessionState.Focusing -> {
             FocusScreen(
-                time = formattedTime
+                time = formattedTime,
+                isPaused = false,
+                onPauseResumeClicked = {
+                    sessionState = SessionState.Paused
+                }
             )
+        }
+
+        SessionState.Paused -> {
+            FocusScreen(
+                time = formattedTime,
+                isPaused = true,
+                onPauseResumeClicked = {
+                    sessionState = SessionState.Focusing
+                }
+            )
+
         }
 
         SessionState.Completed -> {
             CompletedScreen(
                 onRestartClicked = {
-
                     timeRemaining = 1500
                     sessionState = SessionState.Idle
                 }
             )
-
         }
 
     }
@@ -121,7 +135,9 @@ fun IdleScreen(
 
 @Composable
 fun FocusScreen(
-    time: String
+    time: String,
+    isPaused: Boolean,
+    onPauseResumeClicked: () -> Unit
 )
 {
     Column(
@@ -129,16 +145,31 @@ fun FocusScreen(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Text("FocusLock (Active)")
-
-        Text("Keep Holding on!!!")
-
+        Text(
+            if (isPaused) {
+                "FocusLock (Paused)"
+            } else {
+                "FocusLock (Active)"
+            }
+        )
+        Text("keep Holding On")
         Text(time)
 
-        Text("Status: Focus")
-        Button(onClick = {})
-        {
-            Text("Focus Mode Activate")
+        Text(
+            if (isPaused) {
+                "Status:Paused"
+            } else {
+                "Status: Focusing"
+            }
+        )
+        Button(onClick = onPauseResumeClicked) {
+            Text(
+                if (isPaused) {
+                    "Resume"
+                } else {
+                    "Pause"
+                }
+            )
         }
     }
 }
