@@ -20,13 +20,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import com.seyi.focuslocktest.ui.theme.FocusLockTestTheme
 import kotlinx.coroutines.delay
+import java.time.Clock.system
+
+private fun calculateRemainingTime(
+    endTime: Long,
+    currentTime: Long
+): Int {
+    return ((endTime - currentTime) / 1000).toInt()
+}
 
 class MainActivity : ComponentActivity() {
+    private lateinit var storage: SessionStorage
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        storage = SessionStorage(this)
+
         enableEdgeToEdge()
         setContent {
             FocusLockTestTheme {
@@ -50,11 +64,36 @@ enum class SessionState {
 @Composable
 fun FocusLockScreen(modifier: Modifier = Modifier) {
     var sessionState by rememberSaveable { mutableStateOf(SessionState.Idle) }
-    var timeRemaining by rememberSaveable { mutableStateOf(1500) }
+    var timeRemaining by rememberSaveable { mutableStateOf(120) }
+    val context = LocalContext.current
+    val storage = remember { SessionStorage(context) }
 
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
     val formattedTime = String.format("%02d:%02d", minutes, seconds)
+
+    LaunchedEffect(Unit) {
+        val savedState = storage.getSessionState()
+        val savedEndTime = storage.getEndTime()
+        val currentTime = System.currentTimeMillis()
+        val remaining = calculateRemainingTime(savedEndTime, currentTime)
+
+        if (
+            savedState == SessionState.Focusing ||
+            savedState == SessionState.Paused
+        ) {
+            if (remaining > 0) {
+                timeRemaining = remaining
+                sessionState = savedState
+
+            } else {
+
+                storage.clearSession()
+                sessionState = SessionState.Completed
+            }
+        }
+    }
+
 
     LaunchedEffect(sessionState)
     {
@@ -71,7 +110,13 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
     when (sessionState) {
         SessionState.Idle -> {
             IdleScreen(
+                time = formattedTime,
                 onStartClicked = {
+                    val endTime = System.currentTimeMillis() + (timeRemaining * 1000L)
+                    storage.saveSession(
+                        SessionState.Focusing,
+                        endTime
+                    )
                     sessionState = SessionState.Focusing
                 }
             )
@@ -82,6 +127,10 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
                 time = formattedTime,
                 isPaused = false,
                 onPauseResumeClicked = {
+                    storage.saveSession(
+                        SessionState.Paused,
+                        storage.getEndTime()
+                    )
                     sessionState = SessionState.Paused
                 }
             )
@@ -92,7 +141,15 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
                 time = formattedTime,
                 isPaused = true,
                 onPauseResumeClicked = {
+                    storage.saveSession(
+                        SessionState.Focusing,
+                        storage.getEndTime()
+                    )
                     sessionState = SessionState.Focusing
+                    timeRemaining = calculateRemainingTime(
+                        storage.getEndTime(),
+                        System.currentTimeMillis()
+                    )
                 }
             )
 
@@ -101,7 +158,8 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
         SessionState.Completed -> {
             CompletedScreen(
                 onRestartClicked = {
-                    timeRemaining = 1500
+                    storage.clearSession()
+                    timeRemaining = 120
                     sessionState = SessionState.Idle
                 }
             )
@@ -111,6 +169,7 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
 }
 @Composable
 fun IdleScreen(
+    time: String,
     onStartClicked: () -> Unit
 )
 {
@@ -123,7 +182,7 @@ fun IdleScreen(
 
         Text("Make The Choice To Stay Focused Today")
 
-        Text("25:00")
+        Text(time)
 
         Text("Status: Idle")
         Button(onClick = onStartClicked)
