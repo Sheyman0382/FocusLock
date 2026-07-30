@@ -1,5 +1,6 @@
 package com.seyi.focuslocktest
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -22,6 +23,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.core.content.ContextCompat
+import androidx.core.content.ContextCompat.startForegroundService
 import com.seyi.focuslocktest.ui.theme.FocusLockTestTheme
 import kotlinx.coroutines.delay
 import java.time.Clock.system
@@ -40,7 +43,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         storage = SessionStorage(this)
-
         enableEdgeToEdge()
         setContent {
             FocusLockTestTheme {
@@ -112,12 +114,8 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
             IdleScreen(
                 time = formattedTime,
                 onStartClicked = {
-                    val endTime = System.currentTimeMillis() + (timeRemaining * 1000L)
-                    storage.saveSession(
-                        SessionState.Focusing,
-                        endTime
-                    )
-                    sessionState = SessionState.Focusing
+                    val intent = Intent(context, FocusService::class.java)
+                    ContextCompat.startForegroundService(context, intent)
                 }
             )
         }

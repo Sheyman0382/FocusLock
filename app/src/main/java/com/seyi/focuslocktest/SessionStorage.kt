@@ -10,6 +10,7 @@ class SessionStorage(context: Context) {
     companion object {
         private const val KEY_SESSION_STATE = "session_state"
         private const val KEY_END_TIME = "end_time"
+
     }
 
     fun saveSession(state: SessionState, endTime: Long) {
