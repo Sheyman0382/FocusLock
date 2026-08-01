@@ -56,17 +56,10 @@ class MainActivity : ComponentActivity() {
     }
 }
 
-enum class SessionState {
-    Idle,
-    Focusing,
-    Paused,
-    Completed
-}
-
 @Composable
 fun FocusLockScreen(modifier: Modifier = Modifier) {
     var sessionState by rememberSaveable { mutableStateOf(SessionState.Idle) }
-    var timeRemaining by rememberSaveable { mutableStateOf(120) }
+    var timeRemaining by rememberSaveable { mutableStateOf(10) }
     val context = LocalContext.current
     val storage = remember { SessionStorage(context) }
 
@@ -115,6 +108,7 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
                 time = formattedTime,
                 onStartClicked = {
                     val intent = Intent(context, FocusService::class.java)
+                    intent.action = FocusService.ACTION_START_SESSION
                     ContextCompat.startForegroundService(context, intent)
                 }
             )
@@ -157,7 +151,7 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
             CompletedScreen(
                 onRestartClicked = {
                     storage.clearSession()
-                    timeRemaining = 120
+                    timeRemaining = 10
                     sessionState = SessionState.Idle
                 }
             )
