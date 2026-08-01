@@ -123,6 +123,7 @@ class FocusService: Service() {
     private fun endSession() {
         sessionState = SessionState.Completed
         endTime = 0L
+        stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
 }
