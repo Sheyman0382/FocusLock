@@ -22,15 +22,13 @@ class FocusService: Service() {
         const val ACTION_PAUSE_SESSION = "ACTION_PAUSE_SESSION"
         const val ACTION_RESUME_SESSION = "ACTION_RESUME_SESSION"
         const val ACTION_END_SESSION = "ACTION_END_SESSION"
-        private const val FOCUS_DURATION = 10 * 1000L
+        private const val FOCUS_DURATION = 120 * 1000L
 
     }
+
     override fun onBind(intent: Intent?): IBinder? {
         return null
     }
-
-    private var sessionState = SessionState.Idle
-    private var endTime = 0L
 
     override fun onStartCommand(
         intent: Intent?,
@@ -40,6 +38,9 @@ class FocusService: Service() {
 
         createNotificationChannel()
         val notification = createNotification()
+
+
+        Log.d(TAG, "inside onStart command")
 
         startForeground(
             NOTIFICATION_ID,
@@ -87,7 +88,7 @@ class FocusService: Service() {
             .build()
     }
 
-    private fun scheduleSessionEnd() {
+    private fun scheduleSessionEnd(endTime: Long) {
         val endSessionIntent = Intent(
             this,
             FocusService::class.java
@@ -114,15 +115,20 @@ class FocusService: Service() {
     }
 
     private fun startSession() {
-        sessionState = SessionState.Focusing
-        endTime = System.currentTimeMillis() + FOCUS_DURATION
+        val endTime =
+            System.currentTimeMillis() + FOCUS_DURATION
 
-        scheduleSessionEnd()
+        SessionRepository.updateSession(SessionState.Focusing)
+        SessionRepository.updateEndTime(endTime)
+
+        scheduleSessionEnd(endTime)
+
         }
 
     private fun endSession() {
-        sessionState = SessionState.Completed
-        endTime = 0L
+        SessionRepository.updateSession(SessionState.Completed)
+        SessionRepository.updateEndTime(0L)
+
         stopForeground(STOP_FOREGROUND_REMOVE)
         stopSelf()
     }
