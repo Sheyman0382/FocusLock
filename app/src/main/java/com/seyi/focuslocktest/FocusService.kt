@@ -22,7 +22,7 @@ class FocusService: Service() {
         const val ACTION_PAUSE_SESSION = "ACTION_PAUSE_SESSION"
         const val ACTION_RESUME_SESSION = "ACTION_RESUME_SESSION"
         const val ACTION_END_SESSION = "ACTION_END_SESSION"
-        private const val FOCUS_DURATION = 120 * 1000L
+        private const val FOCUS_DURATION = 60 * 1000L
 
     }
 
@@ -39,9 +39,6 @@ class FocusService: Service() {
         createNotificationChannel()
         val notification = createNotification()
 
-
-        Log.d(TAG, "inside onStart command")
-
         startForeground(
             NOTIFICATION_ID,
             notification
@@ -49,13 +46,16 @@ class FocusService: Service() {
 
         when (intent?.action) {
             ACTION_START_SESSION -> {
+                Log.d(TAG, "Android launched ACTION_START_SESSION")
                 startSession()
             }
             ACTION_PAUSE_SESSION -> {
-
+                Log.d(TAG, "Android delivered ACTION_PAUSE_SESSION")
+                pauseSession()
             }
             ACTION_RESUME_SESSION -> {
-
+                Log.d(TAG, "Android delivered ACTION_RESUME_SESSION")
+                resumeSession()
             }
             ACTION_END_SESSION -> {
                 Log.d(TAG, "Android delivered ACTION_END_SESSION")
@@ -88,14 +88,14 @@ class FocusService: Service() {
             .build()
     }
 
-    private fun scheduleSessionEnd(endTime: Long) {
+    private fun createPendingIntent(): PendingIntent {
+        Log.d(TAG, "startSession successfully call create pending intent")
         val endSessionIntent = Intent(
             this,
             FocusService::class.java
         ).apply {
             action = ACTION_END_SESSION
         }
-        Log.d(TAG, "End session intent created")
 
         val endSessionPendingIntent =
             PendingIntent.getService(
@@ -105,31 +105,96 @@ class FocusService: Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or
                         PendingIntent.FLAG_IMMUTABLE
             )
+            return(endSessionPendingIntent)
 
-        val alarmManager = getSystemService(AlarmManager::class.java)
-
-        alarmManager.set(AlarmManager.RTC_WAKEUP,
-            endTime,
-            endSessionPendingIntent
-        )
     }
 
+
     private fun startSession() {
+        Log.d(TAG, "startSession successfully called")
         val endTime =
             System.currentTimeMillis() + FOCUS_DURATION
 
+        SessionStorage(this).saveSession(SessionState.Focusing, endTime)
+
+        SessionRepository.updateClock(SessionClock(endTime = endTime))
         SessionRepository.updateSession(SessionState.Focusing)
-        SessionRepository.updateEndTime(endTime)
 
-        scheduleSessionEnd(endTime)
+        val pendingIntent = createPendingIntent()
+        val alarmManager = getSystemService(AlarmManager::class.java)
 
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            endTime,
+            pendingIntent
+        )
+        Log.d(TAG, "alarm manager successfully schedule an endTime alarm")
+    }
+
+    private fun pauseSession(){
+        val endTime = SessionRepository.sessionClock.value.endTime
+        val remainingTime = endTime - System.currentTimeMillis()
+
+        if (remainingTime <= 0L){
+            endSession()
+            return
         }
 
-    private fun endSession() {
-        SessionRepository.updateSession(SessionState.Completed)
-        SessionRepository.updateEndTime(0L)
+        SessionStorage(this).saveSession(
+            SessionState.Paused, remainingTime
+        )
 
+        SessionRepository.updateClock(SessionClock(remainingTime = remainingTime))
+        SessionRepository.updateSession(SessionState.Paused)
+
+        val pendingIntent = createPendingIntent()
+
+        val alarmManager =
+            getSystemService(AlarmManager::class.java)
+
+        alarmManager.cancel(pendingIntent)
+        Log.d(TAG, "pause session successfully cancel scheduled alarm")
+    }
+
+    private fun resumeSession(){
+        Log.d(TAG, "resume session successfully called")
+        val remainingTime = SessionRepository.sessionClock.value.remainingTime
+
+        if (remainingTime <= 0L){
+            endSession()
+            return
+        }
+        val newEndTime = System.currentTimeMillis() + remainingTime
+
+        SessionStorage(this).saveSession(
+            SessionState.Focusing, newEndTime
+        )
+
+        SessionRepository.updateClock(SessionClock(endTime = newEndTime))
+        SessionRepository.updateSession(SessionState.Focusing)
+
+        val pendingIntent = createPendingIntent()
+        val alarmManager = getSystemService(AlarmManager::class.java)
+
+        alarmManager.setExactAndAllowWhileIdle(
+            AlarmManager.RTC_WAKEUP,
+            newEndTime,
+            pendingIntent
+        )
+        Log.d(TAG, "resume session successfully reschedule another alarm")
+    }
+    private fun endSession() {
+        Log.d(TAG, "END SESSION: entered endSession()")
+
+        SessionRepository.updateClock(SessionClock())
+        SessionRepository.updateSession(SessionState.Completed)
+
+
+        SessionStorage(this).clearSession()
         stopForeground(STOP_FOREGROUND_REMOVE)
+
+        Log.d(TAG, "END SESSION: stopForeground() called")
+
         stopSelf()
     }
 }

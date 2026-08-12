@@ -9,16 +9,16 @@ object SessionRepository {
         MutableStateFlow(SessionState.Idle)
     val sessionState = _sessionState.asStateFlow()
 
-    private val _endTime =
-        MutableStateFlow(0L)
-
-    val endTime =
-        _endTime.asStateFlow()
-
+    private val _sessionClock = MutableStateFlow(
+        SessionClock()
+    )
+    val sessionClock =
+        _sessionClock.asStateFlow()
     fun updateSession(newSession: SessionState) {
         _sessionState.value = newSession
     }
-    fun updateEndTime(endTime: Long) {
-        _endTime.value = endTime
+
+    fun updateClock(newClock:SessionClock){
+        _sessionClock.value = newClock
     }
 }

@@ -30,14 +30,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startForegroundService
+import com.seyi.CompletedScreen
+import com.seyi.FocusScreen
+import com.seyi.IdleScreen
 import com.seyi.focuslocktest.ui.theme.FocusLockTestTheme
 import kotlinx.coroutines.delay
 import java.time.Clock.system
 
 private fun calculateRemainingTime(
-    endTime: Long
+    endTime: Long,
+    currentTime: Long
 ): Int {
-    return ((endTime - System.currentTimeMillis()) / 1000).toInt()
+    return ((endTime - currentTime) / 1000)
+        .toInt()
 }
 
 class MainActivity : ComponentActivity() {
@@ -63,58 +68,98 @@ class MainActivity : ComponentActivity() {
 @Composable
 fun FocusLockScreen(modifier: Modifier = Modifier) {
     val sessionState by SessionRepository.sessionState.collectAsState()
-    val endTime by SessionRepository.endTime.collectAsState()
+    val sessionClock by SessionRepository.sessionClock.collectAsState()
     var currentTime by remember { mutableLongStateOf(System.currentTimeMillis()) }
-
-    val timeRemaining = calculateRemainingTime(endTime)
-
 
     val context = LocalContext.current
     val storage = remember { SessionStorage(context) }
+
+    val timeRemaining = when (sessionState) {
+
+        SessionState.Focusing ->
+            calculateRemainingTime(
+                sessionClock.endTime,
+                currentTime
+            )
+
+        SessionState.Paused ->
+            (sessionClock.remainingTime / 1000).toInt()
+
+        else ->
+            0
+    }
 
 
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
     val formattedTime = String.format("%02d:%02d", minutes, seconds)
 
+
+    //This is the recovery system probably after the app got killed
     LaunchedEffect(Unit) {
         val savedState = storage.getSessionState()
-        val savedEndTime = storage.getEndTime()
-        val remaining = calculateRemainingTime(savedEndTime)
+        val savedClockValue = storage.getEndTime()
 
-        if (
-            savedState == SessionState.Focusing ||
-            savedState == SessionState.Paused
-        ) {
-            if (remaining > 0) {
-                SessionRepository.updateSession(savedState)
-                SessionRepository.updateEndTime(savedEndTime)
+        when (savedState) {
 
-            } else {
+            SessionState.Focusing -> {
+                val remainingTime = calculateRemainingTime(
+                    savedClockValue,
+                    System.currentTimeMillis())
 
-                storage.clearSession()
-                SessionRepository.updateSession(SessionState.Completed)
+                if (remainingTime > 0) {
+                    SessionRepository.updateClock(
+                        SessionClock(
+                            endTime = savedClockValue)
+                    )
+                    SessionRepository.updateSession(SessionState.Focusing)
+                }
+                else {
+                    storage.clearSession()
+                    SessionRepository.updateClock(SessionClock())
+                    SessionRepository.updateSession(SessionState.Completed)
+                }
+            }
+
+            SessionState.Paused -> {
+                if (savedClockValue > 0L) {
+                    SessionRepository.updateClock(SessionClock(remainingTime = savedClockValue))
+                    SessionRepository.updateSession(SessionState.Paused)
+                }
+                else{
+                    storage.clearSession()
+                    SessionRepository.updateClock(SessionClock())
+                    SessionRepository.updateSession(SessionState.Completed)
+                }
+            }
+            else -> {
+                //nothing else to recover
+            }
+        }
+
+    }
+
+    //the effect responsible for recomposing state
+    LaunchedEffect(sessionState) {
+        if (sessionState == SessionState.Focusing) {
+            while (true) {
+                delay(1000)
+                currentTime = System.currentTimeMillis()
             }
         }
     }
 
-
-    LaunchedEffect(Unit) {
-        while (true) {
-            delay(1000)
-            currentTime = System.currentTimeMillis()
-        }
-    }
-
-
+    //Decides which screen to be displayed
     when (sessionState) {
 
         SessionState.Idle -> {
             IdleScreen(
                 time = formattedTime,
                 onStartClicked = {
-                    val intent = Intent(context, FocusService::class.java)
-                    intent.action = FocusService.ACTION_START_SESSION
+                    //the button responsible for launching background service and focus screen display
+                    val intent = Intent(context, FocusService::class.java).apply{
+                        action = FocusService.ACTION_START_SESSION
+                    }
                     ContextCompat.startForegroundService(context, intent)
                 }
             )
@@ -125,11 +170,13 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
                 time = formattedTime,
                 isPaused = false,
                 onPauseResumeClicked = {
-                    storage.saveSession(
-                        SessionState.Paused,
-                        storage.getEndTime()
-                    )
-                    SessionRepository.updateSession(SessionState.Paused)
+                    //button responsible for pausing session and drawing the current screen
+                    val intent = Intent(
+                        context,
+                        FocusService::class.java).apply {
+                        action = FocusService.ACTION_PAUSE_SESSION
+                    }
+                    context.startService(intent)
                 }
             )
         }
@@ -139,117 +186,31 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
                 time = formattedTime,
                 isPaused = true,
                 onPauseResumeClicked = {
-                    storage.saveSession(
-                        SessionState.Focusing,
-                        storage.getEndTime()
-                    )
-                    SessionRepository.updateSession(SessionState.Focusing)
-
+                    val intent = Intent(
+                        context,
+                        FocusService::class.java).apply {
+                        action = FocusService.ACTION_RESUME_SESSION
+                    }
+                    context.startService(intent)
                 }
             )
-
         }
 
         SessionState.Completed -> {
             CompletedScreen(
                 onRestartClicked = {
-                    storage.clearSession()
-
-                    SessionRepository.updateSession(SessionState.Idle)
-                }
-            )
-        }
-
-    }
-}
-@Composable
-fun IdleScreen(
-    time: String,
-    onStartClicked: () -> Unit
-)
-{
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("FocusLock (Ready)")
-
-        Text("Make The Choice To Stay Focused Today")
-
-        Text(time)
-
-        Text("Status: Idle")
-        Button(onClick = onStartClicked)
-        {
-            Text("Activate Mode")
-        }
-    }
-}
-
-@Composable
-fun FocusScreen(
-    time: String,
-    isPaused: Boolean,
-    onPauseResumeClicked: () -> Unit
-)
-{
-    Column(
-        modifier = Modifier.fillMaxSize()
-            .background(color = Color.Blue),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text(
-            if (isPaused) {
-                "FocusLock (Paused)"
-            } else {
-                "FocusLock (Active)"
-            }
-        )
-        Text("keep Holding On")
-        Text(time)
-
-        Text(
-            if (isPaused) {
-                "Status:Paused"
-            } else {
-                "Status: Focusing"
-            }
-        )
-        Button(onClick = onPauseResumeClicked) {
-            Text(
-                if (isPaused) {
-                    "Resume"
-                } else {
-                    "Pause"
+                    val intent = Intent(
+                        context,
+                        FocusService::class.java).apply {
+                        action = FocusService.ACTION_START_SESSION
+                    }
+                    context.startService(intent)
                 }
             )
         }
     }
 }
 
-@Composable
-fun CompletedScreen(
-    onRestartClicked: () -> Unit
-)
-{
-    Column(
-        modifier = Modifier.fillMaxSize(),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Text("🎉 Session Complete!")
-
-        Text("Great job staying focused!")
-
-        Text("Status: Completed")
-        Button(onClick = onRestartClicked)
-        {
-            Text("Start Another Session")
-        }
-    }
-}
 
 @Preview(showBackground = true)
 @Composable
