@@ -89,7 +89,6 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
             0
     }
 
-
     val minutes = timeRemaining / 60
     val seconds = timeRemaining % 60
     val formattedTime = String.format("%02d:%02d", minutes, seconds)
@@ -107,12 +106,22 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
                     savedClockValue,
                     System.currentTimeMillis())
 
+                Log.d(
+                    "MainActivity",
+                    "RECOVERY: savedState=$savedState, savedClockValue=$savedClockValue"
+                )
+
                 if (remainingTime > 0) {
                     SessionRepository.updateClock(
                         SessionClock(
                             endTime = savedClockValue)
                     )
                     SessionRepository.updateSession(SessionState.Focusing)
+
+                    Log.d(
+                        "MainActivity",
+                        "RECOVERY: remainingTime=$remainingTime"
+                    )
                 }
                 else {
                     storage.clearSession()
@@ -122,9 +131,16 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
             }
 
             SessionState.Paused -> {
+                Log.d(
+                    "MainActivity",
+                    "RECOVERY: savedState=$savedState, savedClockValue=$savedClockValue")
                 if (savedClockValue > 0L) {
                     SessionRepository.updateClock(SessionClock(remainingTime = savedClockValue))
                     SessionRepository.updateSession(SessionState.Paused)
+                    Log.d(
+                        "MainActivity",
+                        "RECOVERY: remainingTime=$savedClockValue"
+                    )
                 }
                 else{
                     storage.clearSession()
@@ -143,8 +159,8 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
     LaunchedEffect(sessionState) {
         if (sessionState == SessionState.Focusing) {
             while (true) {
-                delay(1000)
                 currentTime = System.currentTimeMillis()
+                delay(1000)
             }
         }
     }

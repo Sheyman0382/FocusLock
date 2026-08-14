@@ -160,11 +160,20 @@ class FocusService: Service() {
         Log.d(TAG, "resume session successfully called")
         val remainingTime = SessionRepository.sessionClock.value.remainingTime
 
+        Log.d(TAG, "RESUME: remainingTime = $remainingTime ms")
+
         if (remainingTime <= 0L){
             endSession()
             return
         }
         val newEndTime = System.currentTimeMillis() + remainingTime
+
+        Log.d(TAG, "RESUME: newEndTime = $newEndTime")
+
+        Log.d(
+            TAG,
+            "RESUME: duration = ${remainingTime / 1000} seconds"
+        )
 
         SessionStorage(this).saveSession(
             SessionState.Focusing, newEndTime
@@ -181,7 +190,7 @@ class FocusService: Service() {
             newEndTime,
             pendingIntent
         )
-        Log.d(TAG, "resume session successfully reschedule another alarm")
+        Log.d(TAG, "RESUME: alarm rescheduled")
     }
     private fun endSession() {
         Log.d(TAG, "END SESSION: entered endSession()")
