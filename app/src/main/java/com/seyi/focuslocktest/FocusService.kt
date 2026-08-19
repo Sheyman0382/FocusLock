@@ -22,7 +22,7 @@ class FocusService: Service() {
         const val ACTION_PAUSE_SESSION = "ACTION_PAUSE_SESSION"
         const val ACTION_RESUME_SESSION = "ACTION_RESUME_SESSION"
         const val ACTION_END_SESSION = "ACTION_END_SESSION"
-        private const val FOCUS_DURATION = 60 * 1000L
+        private const val FOCUS_DURATION = 300 * 1000L
 
     }
 
@@ -65,7 +65,11 @@ class FocusService: Service() {
         return START_STICKY
     }
 
-
+    private val blockingController =
+        BlockingControllerImpl(
+            //appBlocker = AppBlockerImpl(),
+           //websiteBlocker = WebsiteBlockerImpl()
+        )
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -120,6 +124,10 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(endTime = endTime))
         SessionRepository.updateSession(SessionState.Focusing)
 
+        //blockingController.startBlocking()
+
+        BlockingControllerImpl().startBlocking()
+
         val pendingIntent = createPendingIntent()
         val alarmManager = getSystemService(AlarmManager::class.java)
 
@@ -146,6 +154,8 @@ class FocusService: Service() {
 
         SessionRepository.updateClock(SessionClock(remainingTime = remainingTime))
         SessionRepository.updateSession(SessionState.Paused)
+
+        blockingController.stopBlocking()
 
         val pendingIntent = createPendingIntent()
 
@@ -182,6 +192,8 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(endTime = newEndTime))
         SessionRepository.updateSession(SessionState.Focusing)
 
+        blockingController.startBlocking()
+
         val pendingIntent = createPendingIntent()
         val alarmManager = getSystemService(AlarmManager::class.java)
 
@@ -198,6 +210,7 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock())
         SessionRepository.updateSession(SessionState.Completed)
 
+        blockingController.stopBlocking()
 
         SessionStorage(this).clearSession()
         stopForeground(STOP_FOREGROUND_REMOVE)

@@ -108,7 +108,7 @@ fun FocusLockScreen(modifier: Modifier = Modifier) {
 
                 Log.d(
                     "MainActivity",
-                    "RECOVERY: savedState=$savedState, savedClockValue=$savedClockValue"
+                    "RECOVERY: savedState=$savedState, RemainingTim = $remainingTime"
                 )
 
                 if (remainingTime > 0) {
