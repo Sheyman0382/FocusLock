@@ -1,22 +1,17 @@
 package com.seyi.focuslocktest
 
+import android.accessibilityservice.AccessibilityService
+
 class BlockingControllerImpl(
-    //private val appBlocker: AppBlocker,
-    //private val websiteBlocker: WebsiteBlocker
+    private val accessibilityService: AccessibilityService
 ) : BlockingController {
 
-    override fun startBlocking() {
-        //appBlocker.startBlocking()
-        //websiteBlocker.startBlocking()
-        AppBlockerImpl().startBlocking()
-        WebsiteBlockerImpl().startBlocking()
+    override fun startBlockingApp() {
+        println("BLOCKING APP:")
+        AppBlockerImpl(accessibilityService).startBlocking()
     }
 
-    override fun stopBlocking() {
-        //appBlocker.stopBlocking()
-        //websiteBlocker.stopBlocking()
+    override fun stopBlockingApp(){
 
-        AppBlockerImpl().stopBlocking()
-        WebsiteBlockerImpl().stopBlocking()
     }
 }

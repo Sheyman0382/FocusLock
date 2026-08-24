@@ -69,6 +69,7 @@ class FocusService: Service() {
         BlockingControllerImpl(
             //appBlocker = AppBlockerImpl(),
            //websiteBlocker = WebsiteBlockerImpl()
+            accessibilityService = FocusAccessibilityService()
         )
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -124,9 +125,7 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(endTime = endTime))
         SessionRepository.updateSession(SessionState.Focusing)
 
-        //blockingController.startBlocking()
-
-        BlockingControllerImpl().startBlocking()
+        blockingController.startBlockingApp()
 
         val pendingIntent = createPendingIntent()
         val alarmManager = getSystemService(AlarmManager::class.java)
@@ -155,7 +154,7 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(remainingTime = remainingTime))
         SessionRepository.updateSession(SessionState.Paused)
 
-        blockingController.stopBlocking()
+        blockingController.stopBlockingApp()
 
         val pendingIntent = createPendingIntent()
 
@@ -192,7 +191,7 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(endTime = newEndTime))
         SessionRepository.updateSession(SessionState.Focusing)
 
-        blockingController.startBlocking()
+        blockingController.startBlockingApp()
 
         val pendingIntent = createPendingIntent()
         val alarmManager = getSystemService(AlarmManager::class.java)
@@ -210,7 +209,7 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock())
         SessionRepository.updateSession(SessionState.Completed)
 
-        blockingController.stopBlocking()
+        blockingController.stopBlockingApp()
 
         SessionStorage(this).clearSession()
         stopForeground(STOP_FOREGROUND_REMOVE)

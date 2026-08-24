@@ -2,7 +2,7 @@ package com.seyi.focuslocktest
 
 interface BlockingController {
 
-    fun startBlocking()
+    fun startBlockingApp()
 
-    fun stopBlocking()
+    fun stopBlockingApp()
 }
