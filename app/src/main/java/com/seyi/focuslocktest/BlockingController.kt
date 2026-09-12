@@ -4,5 +4,4 @@ interface BlockingController {
 
     fun startBlockingApp()
 
-    fun stopBlockingApp()
 }

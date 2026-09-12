@@ -5,13 +5,9 @@ import android.accessibilityservice.AccessibilityService
 class BlockingControllerImpl(
     private val accessibilityService: AccessibilityService
 ) : BlockingController {
+    private val appBlocker = AppBlockerImpl(accessibilityService)
 
     override fun startBlockingApp() {
-        println("BLOCKING APP:")
-        AppBlockerImpl(accessibilityService).startBlocking()
-    }
-
-    override fun stopBlockingApp(){
-
+        appBlocker.startBlocking()
     }
 }

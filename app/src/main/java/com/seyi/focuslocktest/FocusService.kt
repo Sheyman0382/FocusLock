@@ -22,7 +22,7 @@ class FocusService: Service() {
         const val ACTION_PAUSE_SESSION = "ACTION_PAUSE_SESSION"
         const val ACTION_RESUME_SESSION = "ACTION_RESUME_SESSION"
         const val ACTION_END_SESSION = "ACTION_END_SESSION"
-        private const val FOCUS_DURATION = 300 * 1000L
+        private const val FOCUS_DURATION = 30 * 1000L
 
     }
 
@@ -65,12 +65,6 @@ class FocusService: Service() {
         return START_STICKY
     }
 
-    private val blockingController =
-        BlockingControllerImpl(
-            //appBlocker = AppBlockerImpl(),
-           //websiteBlocker = WebsiteBlockerImpl()
-            accessibilityService = FocusAccessibilityService()
-        )
     private fun createNotificationChannel() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 
@@ -125,8 +119,6 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(endTime = endTime))
         SessionRepository.updateSession(SessionState.Focusing)
 
-        blockingController.startBlockingApp()
-
         val pendingIntent = createPendingIntent()
         val alarmManager = getSystemService(AlarmManager::class.java)
 
@@ -153,8 +145,6 @@ class FocusService: Service() {
 
         SessionRepository.updateClock(SessionClock(remainingTime = remainingTime))
         SessionRepository.updateSession(SessionState.Paused)
-
-        blockingController.stopBlockingApp()
 
         val pendingIntent = createPendingIntent()
 
@@ -191,8 +181,6 @@ class FocusService: Service() {
         SessionRepository.updateClock(SessionClock(endTime = newEndTime))
         SessionRepository.updateSession(SessionState.Focusing)
 
-        blockingController.startBlockingApp()
-
         val pendingIntent = createPendingIntent()
         val alarmManager = getSystemService(AlarmManager::class.java)
 
@@ -208,8 +196,6 @@ class FocusService: Service() {
 
         SessionRepository.updateClock(SessionClock())
         SessionRepository.updateSession(SessionState.Completed)
-
-        blockingController.stopBlockingApp()
 
         SessionStorage(this).clearSession()
         stopForeground(STOP_FOREGROUND_REMOVE)

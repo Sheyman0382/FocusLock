@@ -8,9 +8,4 @@ class AppBlockerImpl(private val accessibilityService: AccessibilityService): Ap
         accessibilityService.performGlobalAction(
             AccessibilityService.GLOBAL_ACTION_HOME)
     }
-
-    override fun stopBlocking() {
-        println("APP BLOCKING STOPPED")
-
-    }
 }

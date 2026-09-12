@@ -30,9 +30,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.core.content.ContextCompat
 import androidx.core.content.ContextCompat.startForegroundService
-import com.seyi.CompletedScreen
-import com.seyi.FocusScreen
-import com.seyi.IdleScreen
 import com.seyi.focuslocktest.ui.theme.FocusLockTestTheme
 import kotlinx.coroutines.delay
 import java.time.Clock.system

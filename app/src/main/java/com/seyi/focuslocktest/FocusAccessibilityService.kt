@@ -7,15 +7,8 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 
 class FocusAccessibilityService : AccessibilityService() {
-
-    private val blockedApps = setOf(
-        "com.google.android.youtube",
-        "com.whatsapp",
-        "com.instagram.android",
-        "com.facebook.katana"
-    )
-
     private val blockingController = BlockingControllerImpl(this)
+    private val blockedAppsRepository = BlockedAppsRepositoryImpl()
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
 
@@ -24,11 +17,11 @@ class FocusAccessibilityService : AccessibilityService() {
 
         println("CURRENT APP: $packageName")
         println("ACCESSIBILITY EVENT RECEIVED")
+        println("EVENT TEXT: ${event.text}")
 
-        if (packageName in blockedApps && currentState == SessionState.Focusing) {
+        if (blockedAppsRepository.isBlocked(packageName) && currentState == SessionState.Focusing) {
 
             println("BLOCKED APP DETECTED: $packageName")
-
             blockingController.startBlockingApp()
         }
     }
